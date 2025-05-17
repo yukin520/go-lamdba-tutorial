@@ -19,7 +19,7 @@ services:
     container_name: "go-lambda-app"
     build:
       context: .
-      dockerfile: ./app/Dockerfile
+      dockerfile: ./Dockerfile
     ports:
       - 9000:8080
     command: ["/main"]
