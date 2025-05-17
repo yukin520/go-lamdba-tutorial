@@ -1,0 +1,27 @@
+version: '3.8'
+services:
+  localstack:
+    image: localstack/localstack:latest
+    environment:
+      SERVICES: dynamodb
+    ports:
+      - 4566:4566
+  dynamodb-admin: 
+    container_name: dynamodb-admin
+    image: aaronshaf/dynamodb-admin:latest
+    environment:
+      - DYNAMO_ENDPOINT=localstack:4566
+    ports:
+      - 8001:8001
+    depends_on:
+      - localstack
+  go-lambda-app:
+    container_name: "go-lambda-app"
+    build:
+      context: .
+      dockerfile: ./app/Dockerfile
+    ports:
+      - 9000:8080
+    command: ["/main"]
+    depends_on:
+      - localstack

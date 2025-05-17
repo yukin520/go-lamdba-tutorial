@@ -1,0 +1,4 @@
+tests/
+terraform/
+assets/
+compose.yml
