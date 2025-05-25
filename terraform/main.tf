@@ -195,4 +195,49 @@ resource "aws_apigatewayv2_stage" "go-lamdba-tutorial-api-stage" {
 }
 
 
+# ===================================
+# DynamoDB
+# ===================================
+resource "aws_dynamodb_table" "go-lamdba-tutorial-dynamodb" {
+  name           = "go-lamdba-tutorial-dynamodb"
+  billing_mode   = "PROVISIONED"
+  read_capacity  = 20
+  write_capacity = 20
+  hash_key       = "id"
+  range_key      = "updated_at"
 
+  attribute {
+    name = "id"
+    type = "S"
+  }
+
+  attribute {
+    name = "updated_at"
+    type = "N"
+  }
+
+  attribute {
+    name = "record_type"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "TimeToExist"
+    enabled        = true
+  }
+
+  global_secondary_index {
+    name               = "record_type-index"
+    hash_key           = "record_type"
+    range_key          = "updated_at"
+    write_capacity     = 10
+    read_capacity      = 10
+    projection_type    = "ALL"
+  }
+
+  tags = {
+    Name = "go-lamdba-tutorial-dynamodb"
+    type = "go-lamdba-tutorial"
+  }
+
+}
