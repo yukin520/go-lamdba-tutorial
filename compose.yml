@@ -3,7 +3,9 @@ services:
   localstack:
     image: localstack/localstack:latest
     environment:
-      SERVICES: dynamodb
+      - SERVICES=dynamodb
+      - TZ=Asia/Tokyo
+      - DEFAULT_REGION=us-east-1
     ports:
       - 4566:4566
   dynamodb-admin: 
@@ -20,6 +22,13 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
+    environment:
+      - DYNAMODB_TABLE=go-lamdba-tutorial-dev
+      - QUERY_INDEX=record_type-index
+      - DYNAMODB_ENDPOINT=http://localstack:4566
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
     ports:
       - 9000:8080
     command: ["/main"]
