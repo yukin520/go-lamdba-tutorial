@@ -26,13 +26,13 @@ $ curl -XPSOT "http://localhost:9000/2015-03-31/functions/function/invocations"�
 
 | フィールド名   | 型       | キー種別       | 説明                         |
 |----------------|----------|----------------|------------------------------|
-| id             | String   | パーティションキー (PK) | TODOの一意なID              |
+| id             | Number   | パーティションキー (PK) | TODOの一意なID              |
 | updated_at     | String   | ソートキー (SK)        | 更新日時（ISO8601やUNIXタイム）|
 | created_at     | String   | -              | 作成日時                     |
 | name           | String   | -              | TODOのタイトル               |
 | description    | String   | -              | TODOの詳細説明               |
 | record_type    | String   | -              | データ種別（"todo" 固定）   |
-| completed    | String   | -              | 完了状態  |
+| completed    | Bool   | -              | 完了状態  |
 
 ---
 
