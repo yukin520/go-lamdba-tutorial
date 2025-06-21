@@ -31,6 +31,11 @@ type TodoScan struct {
 	RecordType  string    `dynamodbav:"record_type"`
 }
 
+var (
+	RECORD_TYPE_KEY   string = "record_type"
+	RECORD_TYPE_VALUE string = "todo"
+)
+
 func FromScan(s *TodoScan) *domain.ToDo {
 	var todo domain.ToDo
 
@@ -92,8 +97,6 @@ func (m *repository) getTodoItemById(ctx context.Context, id uint) (*TodoScan, e
 }
 
 func (m *repository) ListTodo(ctx context.Context) ([]*domain.ToDo, error) {
-	RECORD_TYPE_KEY := "record_type"
-	RECORD_TYPE_VALUE := "todo"
 
 	var todoList []*domain.ToDo
 
@@ -170,7 +173,49 @@ func (m *repository) CreateTodo(ctx context.Context, param *domain.ToDo) (uint, 
 }
 
 func (m *repository) UpdateTodo(ctx context.Context, param *domain.ToDo) (*domain.ToDo, error) {
-	panic("GetTodo not implemented")
+	// fetch target todo item from DynamoDB.
+	currentItem, err := m.getTodoItemById(ctx, param.Id)
+	if err != nil {
+		log.Printf("Couldn't get todo item from dynamodb. Here's why: %v\n", err)
+		return nil, err
+	}
+
+	// Update todo item record at DynamoDB.
+	var response *dynamodb.UpdateItemOutput
+	update := expression.Set(expression.Name("name"), expression.Value(param.Name))
+	update.Set(expression.Name("description"), expression.Value(param.Description))
+	update.Set(expression.Name("completed"), expression.Value(param.Completed))
+	update.Set(expression.Name("updated_at"), expression.Value(param.UpdatedAt))
+	update.Set(expression.Name("created_at"), expression.Value(currentItem.CreatedAt))   // Use current item's value.
+	update.Set(expression.Name("record_type"), expression.Value(currentItem.RecordType)) // Use current item's value.
+	expr, err := expression.NewBuilder().WithUpdate(update).Build()
+	if err != nil {
+		log.Printf("Couldn't build expression for update. Here's why: %v\n", err)
+		return nil, err
+	} else {
+		idMap := map[string]types.AttributeValue{"id": &types.AttributeValueMemberN{Value: strconv.FormatUint(uint64(currentItem.Id), 10)}}
+		response, err = m.Client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+			TableName:                 aws.String(*m.Table),
+			Key:                       idMap,
+			ExpressionAttributeNames:  expr.Names(),
+			ExpressionAttributeValues: expr.Values(),
+			UpdateExpression:          expr.Update(),
+			ReturnValues:              types.ReturnValueUpdatedNew,
+		})
+		if err != nil {
+			log.Printf("Couldn't update todo %v. Here's why: %v\n", param.Id, err)
+			return nil, err
+		}
+	}
+
+	// perse dynamodb data to todo item.
+	var todo TodoScan
+	err = attributevalue.UnmarshalMap(response.Attributes, &todo)
+	if err != nil {
+		log.Printf("Couldn't unmarshall update response. Here's why: %v\n", err)
+		return nil, err
+	}
+	return FromScan(&todo), nil
 }
 
 func (m *repository) DeleteTodo(ctx context.Context, id uint) error {

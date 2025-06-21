@@ -149,12 +149,55 @@ func LamdaHandler(context context.Context, request events.APIGatewayV2HTTPReques
 	}
 
 	if string(request.RequestContext.HTTP.Method) == "PUT" {
-		body := struct{ Msg string }{
-			Msg: "\"Updated item.\"",
+		// Update Todo Item.
+		if request.RequestContext.HTTP.Path == "/item" {
+			var params todoRequestParams
+			if len(request.Body) <= 0 {
+				return infra.APIResponse(400, domain.ErrInvalidParameters)
+			}
+			err := json.Unmarshal([]byte(request.Body), &params)
+			if err != nil {
+				log.Printf("Unmarshal error: %v\n", err)
+				return infra.APIResponse(400, domain.ErrInvalidParameters)
+			}
+
+			loc, _ := time.LoadLocation("Asia/Tokyo")
+			todoData := domain.ToDo{
+				Id:          params.Id,
+				Name:        params.Name,
+				Description: params.Description,
+				Completed:   params.Completed,
+				CreatedAt:   time.Now().In(loc),
+				UpdatedAt:   time.Now().In(loc),
+			}
+
+			updatedTodoItem, err := todoUsecase.UpdateTodo(context, &todoData)
+			if errors.Is(err, domain.ErrNotFound) {
+				body := struct{ Msg string }{
+					Msg: "\"todo item is not found.\"",
+				}
+				response, _ = infra.APIResponse(400, body)
+				return response, nil
+			}
+			if err != nil {
+				body := struct{ Msg string }{
+					Msg: "\"faild to update todo item.\"",
+				}
+				response, _ = infra.APIResponse(500, body)
+				return response, nil
+			}
+			response, _ = infra.APIResponse(200, updatedTodoItem)
+			return response, nil
 		}
-		response, _ = infra.APIResponse(200, body)
+
+		// Incorrect path.
+		body := struct{ Msg string }{
+			Msg: "\"not found.\"",
+		}
+		response, _ = infra.APIResponse(404, body)
 		return response, nil
 	}
+
 	if string(request.RequestContext.HTTP.Method) == "DELETE" {
 		body := struct{ Msg string }{
 			Msg: "\"Deleted item.\"",

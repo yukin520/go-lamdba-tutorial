@@ -15,7 +15,7 @@
       "userAgent": "curl"
     }
   },
-  "body": "{\"name\": \"item1\"}",
+  "body": "{\"id\": 1, \"name\": \"sample1\", \"description\": \"This is an sample item.(fixed)\", \"completed\": true}",
   "isBase64Encoded": false,
   "time": "17/May/2025:12:00:00 +0000",
   "timeEpoch": 1715947200000
