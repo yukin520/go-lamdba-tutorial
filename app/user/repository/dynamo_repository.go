@@ -3,12 +3,14 @@ package repository
 import (
 	"context"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/yukin520/go-lamdba-tutorial/app/domain"
 )
 
@@ -61,6 +63,31 @@ func NewRepository(table string, query string, client dynamodb.Client) domain.To
 	}
 }
 
+func (m *repository) getTodoItemById(ctx context.Context, id uint) (*TodoScan, error) {
+	var todo TodoScan
+	strId := strconv.FormatUint(uint64(id), 10)
+
+	idMap := map[string]types.AttributeValue{"id": &types.AttributeValueMemberN{Value: strId}}
+
+	response, err := m.Client.GetItem(ctx, &dynamodb.GetItemInput{
+		Key: idMap, TableName: aws.String(*m.Table),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	if response.Item == nil || len(response.Item) == 0 {
+		return nil, domain.ErrNotFound
+	}
+
+	err = attributevalue.UnmarshalMap(response.Item, &todo)
+	if err != nil {
+		return nil, err
+	}
+
+	return &todo, nil
+}
+
 func (m *repository) ListTodo(ctx context.Context) ([]*domain.ToDo, error) {
 	RECORD_TYPE_KEY := "record_type"
 	RECORD_TYPE_VALUE := "todo"
@@ -105,7 +132,12 @@ func (m *repository) ListTodo(ctx context.Context) ([]*domain.ToDo, error) {
 }
 
 func (m *repository) GetTodo(ctx context.Context, id uint) (*domain.ToDo, error) {
-	panic("GetTodo not implemented")
+	todoScan, err := m.getTodoItemById(ctx, id)
+	if err != nil {
+		log.Printf("Couldn't get todo item from dynamodb. Here's why: %v\n", err)
+		return nil, err
+	}
+	return FromScan(todoScan), nil
 }
 
 func (m *repository) CreateTodo(ctx context.Context, param *domain.ToDo) (uint, error) {
