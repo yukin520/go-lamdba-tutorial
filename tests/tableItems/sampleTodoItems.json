@@ -1,0 +1,20 @@
+[
+    {
+        "id": 0,
+        "updated_at": "2025-06-08T10:35:00Z",
+        "created_at": "2025-06-08T10:35:00Z",
+        "name": "sample-todo",
+        "description": "sample-todo",
+        "record_type": "todo",
+        "completed": false
+    },
+    {
+        "id": 1,
+        "updated_at": "2025-06-08T10:38:00Z",
+        "created_at": "2025-06-08T10:38:00Z",
+        "name": "sample-todo-2",
+        "description": "sample-todo-2",
+        "record_type": "todo",
+        "completed": true
+    }
+]

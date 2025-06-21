@@ -1,18 +1,16 @@
 {
   "version": "2.0",
-  "routeKey": "GET /item",
-  "rawPath": "/item",
-  "rawQueryString": "id=1",
+  "routeKey": "GET /",
+  "rawPath": "/",
+  "rawQueryString": "",
   "headers": {
     "host": "localhost"
   },
-  "queryStringParameters": {
-    "id": "1"
-  },
+  "queryStringParameters": {},
   "requestContext": {
     "http": {
       "method": "GET",
-      "path": "/item",
+      "path": "/",
       "protocol": "HTTP/1.1",
       "sourceIp": "127.0.0.1",
       "userAgent": "curl"
