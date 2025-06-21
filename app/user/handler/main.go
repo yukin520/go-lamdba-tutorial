@@ -2,9 +2,11 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 
@@ -18,6 +20,13 @@ var (
 	todoRepo    domain.TodoRepository
 	todoUsecase domain.TodoUsecase
 )
+
+type todoRequestParams struct {
+	Id          uint   `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Completed   bool   `json:"completed"`
+}
 
 func init() {
 	con, err := infra.NewDynamoDBConnectionFromEnv()
@@ -82,12 +91,63 @@ func LamdaHandler(context context.Context, request events.APIGatewayV2HTTPReques
 	}
 
 	if string(request.RequestContext.HTTP.Method) == "POST" {
-		body := struct{ Msg string }{
-			Msg: "\"Craeted item.\"",
+		// Create Todo Item.
+		if request.RequestContext.HTTP.Path == "/item" {
+			var params todoRequestParams
+			if len(request.Body) <= 0 {
+				return infra.APIResponse(400, domain.ErrInvalidParameters)
+			}
+			err := json.Unmarshal([]byte(request.Body), &params)
+			if err != nil {
+				log.Printf("Unmarshal error: %v\n", err)
+				return infra.APIResponse(400, domain.ErrInvalidParameters)
+			}
+
+			loc, _ := time.LoadLocation("Asia/Tokyo")
+			todoData := domain.ToDo{
+				Id:          params.Id,
+				Name:        params.Name,
+				Description: params.Description,
+				Completed:   params.Completed,
+				CreatedAt:   time.Now().In(loc),
+				UpdatedAt:   time.Now().In(loc),
+			}
+
+			createdItemId, err := todoUsecase.CreateTodo(context, &todoData)
+			if errors.Is(err, domain.ErrAlreadyExists) {
+				body := struct{ Msg string }{
+					Msg: "\"todo item is already exists.\"",
+				}
+				response, _ = infra.APIResponse(400, body)
+				return response, nil
+			}
+			if err != nil {
+				body := struct{ Msg string }{
+					Msg: "\"faild to create todo item.\"",
+				}
+				response, _ = infra.APIResponse(500, body)
+				return response, nil
+			}
+
+			body := struct {
+				Msg string
+				Id  uint
+			}{
+				Msg: "\"todo item is created.\"",
+				Id:  createdItemId,
+			}
+			response, _ = infra.APIResponse(200, body)
+			return response, nil
 		}
-		response, _ = infra.APIResponse(200, body)
+
+		// Incorrect path.
+		body := struct{ Msg string }{
+			Msg: "\"not found.\"",
+		}
+		response, _ = infra.APIResponse(404, body)
 		return response, nil
 	}
+
 	if string(request.RequestContext.HTTP.Method) == "PUT" {
 		body := struct{ Msg string }{
 			Msg: "\"Updated item.\"",

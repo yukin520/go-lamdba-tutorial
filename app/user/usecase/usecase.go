@@ -33,7 +33,11 @@ func (m *usecase) GetTodo(ctx context.Context, id uint) (*domain.ToDo, error) {
 }
 
 func (m *usecase) CreateTodo(ctx context.Context, param *domain.ToDo) (uint, error) {
-	panic("GetTodo not implemented")
+	res, err := m.todoRepo.CreateTodo(ctx, param)
+	if err != nil {
+		return 0, err
+	}
+	return res, nil
 }
 func (m *usecase) UpdateTodo(ctx context.Context, param *domain.ToDo) (*domain.ToDo, error) {
 	panic("GetTodo not implemented")

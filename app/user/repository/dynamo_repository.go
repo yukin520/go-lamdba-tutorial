@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"log"
 	"strconv"
 	"time"
@@ -27,6 +28,7 @@ type TodoScan struct {
 	CreatedAt   time.Time `dynamodbav:"created_at"`
 	UpdatedAt   time.Time `dynamodbav:"updated_at"`
 	Completed   bool      `dynamodbav:"completed"`
+	RecordType  string    `dynamodbav:"record_type"`
 }
 
 func FromScan(s *TodoScan) *domain.ToDo {
@@ -51,6 +53,7 @@ func ToScan(t *domain.ToDo) *TodoScan {
 	todoScan.Id = t.Id
 	todoScan.Name = t.Name
 	todoScan.UpdatedAt = t.UpdatedAt
+	todoScan.RecordType = "todo"
 
 	return &todoScan
 }
@@ -141,7 +144,29 @@ func (m *repository) GetTodo(ctx context.Context, id uint) (*domain.ToDo, error)
 }
 
 func (m *repository) CreateTodo(ctx context.Context, param *domain.ToDo) (uint, error) {
-	panic("GetTodo not implemented")
+	currentItem, err := m.getTodoItemById(ctx, param.Id)
+	if currentItem != nil {
+		return param.Id, domain.ErrAlreadyExists
+	}
+	// The absence of the item is a prerequisite for creating a new one.
+	if err != nil && !errors.Is(err, domain.ErrNotFound) {
+		log.Printf("Couldn't get todo item from dynamodb. Here's why: %v\n", err)
+		return param.Id, err
+	}
+
+	// Create item record to DynamoDB talbe.
+	todoScan := ToScan(param)
+	item, err := attributevalue.MarshalMap(todoScan)
+	if err != nil {
+		return param.Id, err
+	}
+	_, err = m.Client.PutItem(ctx, &dynamodb.PutItemInput{
+		TableName: aws.String(*m.Table), Item: item,
+	})
+	if err != nil {
+		log.Printf("Couldn't add item to table. Here's why: %v\n", err)
+	}
+	return param.Id, err
 }
 
 func (m *repository) UpdateTodo(ctx context.Context, param *domain.ToDo) (*domain.ToDo, error) {
