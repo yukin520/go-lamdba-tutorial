@@ -48,5 +48,6 @@ func (m *usecase) UpdateTodo(ctx context.Context, param *domain.ToDo) (*domain.T
 }
 
 func (m *usecase) DeleteTodo(ctx context.Context, id uint) error {
-	panic("GetTodo not implemented")
+	err := m.todoRepo.DeleteTodo(ctx, id)
+	return err
 }

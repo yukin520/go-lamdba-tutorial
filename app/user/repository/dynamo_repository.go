@@ -73,14 +73,9 @@ func NewRepository(table string, query string, client dynamodb.Client) domain.To
 
 func (m *repository) getTodoItemById(ctx context.Context, id uint) (*TodoScan, error) {
 	var todo TodoScan
-	strId := strconv.FormatUint(uint64(id), 10)
-
-	idMap := map[string]types.AttributeValue{"id": &types.AttributeValueMemberN{Value: strId}}
-
 	response, err := m.Client.GetItem(ctx, &dynamodb.GetItemInput{
-		Key: idMap, TableName: aws.String(*m.Table),
+		Key: makeTodoItemKey(id), TableName: aws.String(*m.Table),
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -92,8 +87,12 @@ func (m *repository) getTodoItemById(ctx context.Context, id uint) (*TodoScan, e
 	if err != nil {
 		return nil, err
 	}
-
 	return &todo, nil
+}
+
+func makeTodoItemKey(id uint) map[string]types.AttributeValue {
+	return map[string]types.AttributeValue{"id": &types.AttributeValueMemberN{
+		Value: strconv.FormatUint(uint64(id), 10)}}
 }
 
 func (m *repository) ListTodo(ctx context.Context) ([]*domain.ToDo, error) {
@@ -193,10 +192,9 @@ func (m *repository) UpdateTodo(ctx context.Context, param *domain.ToDo) (*domai
 		log.Printf("Couldn't build expression for update. Here's why: %v\n", err)
 		return nil, err
 	} else {
-		idMap := map[string]types.AttributeValue{"id": &types.AttributeValueMemberN{Value: strconv.FormatUint(uint64(currentItem.Id), 10)}}
 		response, err = m.Client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 			TableName:                 aws.String(*m.Table),
-			Key:                       idMap,
+			Key:                       makeTodoItemKey(currentItem.Id),
 			ExpressionAttributeNames:  expr.Names(),
 			ExpressionAttributeValues: expr.Values(),
 			UpdateExpression:          expr.Update(),
@@ -219,5 +217,17 @@ func (m *repository) UpdateTodo(ctx context.Context, param *domain.ToDo) (*domai
 }
 
 func (m *repository) DeleteTodo(ctx context.Context, id uint) error {
-	panic("GetTodo not implemented")
+	_, err := m.getTodoItemById(ctx, id)
+	if err != nil {
+		log.Printf("Couldn't get todo item from dynamodb. Here's why: %v\n", err)
+		return err
+	}
+	_, err = m.Client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
+		TableName: aws.String(*m.Table), Key: makeTodoItemKey(id),
+	})
+	if err != nil {
+		log.Printf("Couldn't delete todo item from dynamodb. Here's why: %v\n", err)
+		return err
+	}
+	return nil
 }

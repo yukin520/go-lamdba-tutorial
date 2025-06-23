@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -199,10 +200,45 @@ func LamdaHandler(context context.Context, request events.APIGatewayV2HTTPReques
 	}
 
 	if string(request.RequestContext.HTTP.Method) == "DELETE" {
-		body := struct{ Msg string }{
-			Msg: "\"Deleted item.\"",
+		// Delete Todo Item.
+		if strings.HasPrefix(request.RawPath, "/item/") {
+			todoItemId, err := strconv.Atoi(request.PathParameters["id"])
+			if err != nil {
+				body := struct{ Msg string }{
+					Msg: "\"faild to delete todo item.\"",
+				}
+				response, _ = infra.APIResponse(500, body)
+				return response, nil
+			}
+
+			err = todoUsecase.DeleteTodo(context, uint(todoItemId))
+			if errors.Is(err, domain.ErrNotFound) {
+				body := struct{ Msg string }{
+					Msg: "\"todo item is not found.\"",
+				}
+				response, _ = infra.APIResponse(400, body)
+				return response, nil
+			}
+			if err != nil {
+				body := struct{ Msg string }{
+					Msg: "\"faild to delete todo item.\"",
+				}
+				response, _ = infra.APIResponse(500, body)
+				return response, nil
+			}
+
+			body := struct{ Msg string }{
+				Msg: "\"todo item is delted sccessfully.\"",
+			}
+			response, _ = infra.APIResponse(200, body)
+			return response, nil
 		}
-		response, _ = infra.APIResponse(200, body)
+
+		// Incorrect path.
+		body := struct{ Msg string }{
+			Msg: "\"not found.\"",
+		}
+		response, _ = infra.APIResponse(404, body)
 		return response, nil
 	}
 
